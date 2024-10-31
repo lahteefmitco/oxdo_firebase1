@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "627078612621",
+    "project_id": "oxdo-firebase1",
+    "storage_bucket": "oxdo-firebase1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:627078612621:android:a1efec7990a29fec60c4c4",
+        "android_client_info": {
+          "package_name": "com.oxdotechnologies.oxdo_firebase1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYHv47eRDQzgiEMeq4Jr6QCNwwnztso14"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
