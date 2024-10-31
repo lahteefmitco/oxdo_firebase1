@@ -14,8 +14,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
- 
   // Firestore collection name
   final String collectionName = "PersonData";
 
@@ -36,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showProgressBar = false;
 
   void _addPersonDataTofirebase(Person person) async {
-    _showProgressBar = true;
+    //  _showProgressBar = true;
     setState(() {});
     await fdb
         .collection(collectionName)
@@ -51,21 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _ageController.clear();
 
     _unFocusAllFocusNode();
-
-    _getAllPersonListFromFirestore();
-  }
-
-  void _getAllPersonListFromFirestore() async {
-    _personList.clear();
-    final QuerySnapshot<Map<String, dynamic>> querySnapShot =
-        await fdb.collection(collectionName).get();
-    for (var element in querySnapShot.docs) { 
-      final String id = element.id;
-      final Map<String, dynamic> data = element.data();
-      _personList.add(Person.fromJson(data, id));
-    }
-    _showProgressBar = false;
-    setState(() {});
   }
 
   void _bringPersonToUpdate(Person person) {
@@ -77,8 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _updatePersonInFireStore(Person personToUpdate) async {
-    _showProgressBar = true;
-    setState(() {});
     final DocumentReference<Map<String, dynamic>> documentRef =
         fdb.collection(collectionName).doc(personToUpdate.id);
     await documentRef.update(personToUpdate.toJson()).then((value) {
@@ -87,33 +68,18 @@ class _HomeScreenState extends State<HomeScreen> {
       log("Error is $e", name: "oxdo");
     });
 
-    
     _nameController.clear();
     _ageController.clear();
     _saveButtonMode = SaveButtonMode.save;
 
     _unFocusAllFocusNode();
 
-    _getAllPersonListFromFirestore();
+    setState(() {});
   }
 
   void _deleteAPersonInFireStore(String id) async {
-    _showProgressBar = true;
-    setState(() {
-      
-    });
-    await fdb.collection(collectionName).doc(id).delete();
-    _getAllPersonListFromFirestore();
-  }
-
-  @override
-  void initState() {
-    _showProgressBar = true;
     setState(() {});
-
-    // initial loading of all data from firestore
-    _getAllPersonListFromFirestore();
-    super.initState();
+    await fdb.collection(collectionName).doc(id).delete();
   }
 
   // un focus text fields,  hide keyboard
@@ -132,9 +98,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
-      return Scaffold(
+    // Stream of documents
+    final Stream<QuerySnapshot<Map<String, dynamic>>> personStream =
+        fdb.collection(collectionName).snapshots();
+
+      
+
+    return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text("Firestore"),
@@ -214,46 +187,76 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(
                     height: 8,
                   ),
+                   StreamBuilder(
+                    stream: personStream,
+                    builder: (context, snapShot) {
+                      if (snapShot.connectionState == ConnectionState.waiting) {
+                        log("in waiting");
+                        _showProgressBar = true;
+                      }
+                      if (snapShot.hasError) {
+                        log("Error");
+                        _showProgressBar = false;
+                      }
+                      if (snapShot.hasData) {
+                        _showProgressBar = false;
+                        log("Data");
+                        final QuerySnapshot<Map<String, dynamic>>?
+                            querySnapshot = snapShot.data;
+                        if (querySnapshot != null) {
+                          _personList.clear();
+                          for (var documentSnapshot in querySnapshot.docs) {
+                            final person = Person.fromJson(
+                                documentSnapshot.data(), documentSnapshot.id);
+                            _personList.add(person);
+                          }
+                        }
+                      }
+                      log("Other");
+                      _showProgressBar = false;
+                      return Expanded(
+                        child: ListView.separated(
+                          itemBuilder: (context, index) {
+                            final person = _personList[index];
 
-                  Expanded(
-                    child: ListView.separated(
-                      itemBuilder: (context, index) {
-                        final person = _personList[index];
-
-                        return Card(
-                          child: ListTile(
-                            title: Text("Name:- ${person.name}"),
-                            subtitle: Text("Age:- ${person.age}"),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    // take data to update
-                                    _bringPersonToUpdate(person);
-                                  },
-                                  icon: const Icon(Icons.edit),
+                            return Card(
+                              child: ListTile(
+                                title: Text("Name:- ${person.name}"),
+                                subtitle: Text("Age:- ${person.age}"),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      onPressed: () {
+                                        // take data to update
+                                        _bringPersonToUpdate(person);
+                                      },
+                                      icon: const Icon(Icons.edit),
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
+                                        if (person.id != null) {
+                                          _deleteAPersonInFireStore(person.id!);
+                                        }
+                                      },
+                                      color: Colors.red,
+                                      icon: const Icon(Icons.delete),
+                                    ),
+                                  ],
                                 ),
-                                IconButton(
-                                  onPressed: () {
-                                    if (person.id != null) {
-                                      _deleteAPersonInFireStore(person.id!);
-                                    }
-                                  },
-                                  color: Colors.red,
-                                  icon: const Icon(Icons.delete),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                      separatorBuilder: (context, index) {
-                        return const Divider();
-                      },
-                      itemCount: _personList.length,
-                    ),
+                              ),
+                            );
+                          },
+                          separatorBuilder: (context, index) {
+                            return const Divider();
+                          },
+                          itemCount: _personList.length,
+                        ),
+                      );
+                    },
                   )
+                
+                
                 ],
               ),
               // This trailing comma makes auto-formatting nicer for build methods.
@@ -266,6 +269,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  
   }
 }
