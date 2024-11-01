@@ -110,8 +110,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // Stream of documents
+    // added orderby to order name
     final Stream<QuerySnapshot<Map<String, dynamic>>> personStream =
-        fdb.collection(collectionName).snapshots();
+        fdb.collection(collectionName).orderBy("name") .snapshots();
 
     return Scaffold(
       appBar: AppBar(
