@@ -34,17 +34,18 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showProgressBar = false;
 
   void _addPersonDataTofirebase(Person person) async {
-    //  _showProgressBar = true;
     setState(() {});
+  
+    // Using .withConverter to add data
     await fdb
         .collection(collectionName)
-        .add(person.toJson())
-        .then((DocumentReference<Map<String, dynamic>> docRef) {
-      final String id = docRef.id;
-      log("Insert Data with $id", name: "oxdo");
-    }).onError((e, stack) {
-      log("Error on inserting $e", name: "oxdo");
-    });
+        .withConverter(
+            fromFirestore: Person.fromFireStore,
+            toFirestore: (p, _) {
+              return p.toFirestore();
+            })
+        .add(person);
+
     _nameController.clear();
     _ageController.clear();
 
@@ -60,9 +61,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _updatePersonInFireStore(Person personToUpdate) async {
+
+    // Using withconverter to update data
     final DocumentReference<Map<String, dynamic>> documentRef =
-        fdb.collection(collectionName).doc(personToUpdate.id);
-    await documentRef.update(personToUpdate.toJson()).then((value) {
+        fdb.collection(collectionName).doc(personToUpdate.id)
+          ..withConverter(
+              fromFirestore: Person.fromFireStore,
+              toFirestore: (p, _) {
+                return p.toFirestore();
+              });
+    await documentRef.update(personToUpdate.toFirestore()).then((value) {
       log("Updated successfully", name: "oxdo");
     }).onError((e, stack) {
       log("Error is $e", name: "oxdo");
@@ -104,8 +112,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // Stream of documents
     final Stream<QuerySnapshot<Map<String, dynamic>>> personStream =
         fdb.collection(collectionName).snapshots();
-
-      
 
     return Scaffold(
       appBar: AppBar(
@@ -187,32 +193,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(
                     height: 8,
                   ),
-                   StreamBuilder(
+                  StreamBuilder(
                     stream: personStream,
                     builder: (context, snapShot) {
                       if (snapShot.connectionState == ConnectionState.waiting) {
-                        log("in waiting");
+                        
                         _showProgressBar = true;
                       }
                       if (snapShot.hasError) {
-                        log("Error");
+                        
                         _showProgressBar = false;
                       }
                       if (snapShot.hasData) {
                         _showProgressBar = false;
-                        log("Data");
+                    
                         final QuerySnapshot<Map<String, dynamic>>?
                             querySnapshot = snapShot.data;
                         if (querySnapshot != null) {
                           _personList.clear();
                           for (var documentSnapshot in querySnapshot.docs) {
-                            final person = Person.fromJson(
-                                documentSnapshot.data(), documentSnapshot.id);
+                            final person = Person.fromFireStore(
+                                documentSnapshot, null);
                             _personList.add(person);
                           }
                         }
                       }
-                      log("Other");
+                      
                       _showProgressBar = false;
                       return Expanded(
                         child: ListView.separated(
@@ -255,8 +261,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   )
-                
-                
                 ],
               ),
               // This trailing comma makes auto-formatting nicer for build methods.
